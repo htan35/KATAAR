@@ -17,26 +17,138 @@ KATAAR is a next-generation e-ticketing platform built with Next.js, Prisma, and
 
 ---
 
-## System Architecture & Activity Flow
+## System Architecture & Data Flow
+
+### System Component Diagram
+The diagram below details the components of KATAAR and how they interact:
 
 ```mermaid
-flowchart TD
-    A([User Authenticated]) --> B(Access Chat Dashboard)
-    B --> C{Natural Language Input}
+graph TD
+    subgraph Client ["Next.js Frontend (Port 3000)"]
+        UI["React Pages (Chat, QR, History, Settings)"]
+        Sidebar["Sidebar Component (ChatSidebar.tsx)"]
+        Theme["CSS Themes (globals.css - Dark/Light)"]
+    end
+
+    subgraph Server ["Next.js App Router (Backend APIs & Actions)"]
+        API["/api/chat-json (Controller)"]
+        Actions["Server Actions (actions.ts)"]
+        Auth["NextAuth.js (Session Middleware)"]
+    end
+
+    subgraph AI ["AI Engine (Google Gemini API)"]
+        Gemini["Gemini 3.5 Flash Model"]
+        Grounding["Google Search Grounding Engine"]
+    end
+
+    subgraph Database ["Data Tier"]
+        Prisma["Prisma ORM (Schema Manager)"]
+        Postgres[(PostgreSQL Database - Supabase/Neon)]
+    end
+
+    UI -->|POST /api/chat-json| API
+    UI -->|Invoke Actions| Actions
+    Actions -->|Session Context| Auth
     
-    C -- Query --> D[Gemini 3.5 Flash Engine]
-    D --> E[(Google Web Grounding)]
-    E -- Live Data --> F[Extract Pricing & Timings]
+    API -->|Prompt & History| Gemini
+    Gemini -->|Live Web Search Query| Grounding
+    Grounding -->|Real-Time Attraction Data| Gemini
     
-    F --> G{Booking State Generator}
-    G -- JSON Object --> H[Render UI Booking Card]
-    
-    H -- User Confirmation --> I[Payment Gateway Simulation]
-    I -- Success --> J[(PostgreSQL Database)]
-    J --> K[Generate Unique E-Ticket]
-    K --> L[Embed QR Code Signature]
-    
-    L --> M([Display Ticket in Dashboard])
+    API -->|Fetch / Write Message| Prisma
+    Actions -->|Prisma CRUD Operations| Prisma
+    Prisma -->|Postgres Connection| Postgres
+```
+
+### Attraction Booking Sequence
+The request-response lifecycle for attraction discovery, booking details collection, and ticket creation:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User
+    participant UI as React Chat Interface
+    participant API as API Route (/api/chat-json)
+    participant Gemini as Google Gemini 3.5 Flash
+    participant DB as PostgreSQL Database
+    participant Action as Server Actions
+
+    User->>UI: Input conversational query ("Book Taj Mahal")
+    UI->>UI: Read language preference from localStorage
+    UI->>API: POST /api/chat-json { message, chatId, language }
+    API->>DB: Fetch previous chat history messages
+    DB-->>API: Return historical conversation context
+    API->>Gemini: Call model with System Prompt, History & User Query
+    Note over Gemini: Ground model with Google Search<br/>to retrieve live pricing & timings
+    Gemini-->>API: Return text response + [BOOKING_STATE: JSON]
+    API->>DB: Write User & Assistant messages to database
+    API-->>UI: Respond with text response & parsed booking JSON
+    UI-->>User: Render updated chatbot response & Booking Card
+
+    opt User completes and confirms details
+        User->>UI: Select visitors, click 'Pay Now'
+        UI->>UI: Simulate Payment Process
+        UI->>Action: Invoke createTicket({ attraction, date, tickets, price })
+        Action->>DB: Create new Ticket record with unique QR signature
+        DB-->>Action: Return created Ticket object
+        Action-->>UI: Respond with Success & QR details
+        UI-->>User: Display generated entry QR Code card
+    end
+```
+
+---
+
+## Repository Directory Structure
+
+```text
+KATAAR/
+├── docs/                           # High-level project documentation
+│   ├── design/                     # Design-related assets
+│   │   ├── mockups/                # High-fidelity Figma / UI screens
+│   │   └── README.md               # Summary of mockups and design guidelines
+│   ├── ai/                         # Workspace assistant history (Git-ignored)
+│   │   ├── .agents/                # AI instruction modules
+│   │   ├── CLAUDE.md               # Claude CLI run configurations
+│   │   └── ASSISTANT_LOGS.md       # Interaction and deployment logs
+│   └── README.md                   # Project documentation structure overview
+├── prisma/                         # Database schema & migrations
+│   ├── schema.prisma               # Prisma schemas (User, Chat, Message, Ticket)
+│   └── seed.ts                     # Database seeding utilities (optional)
+├── public/                         # Static application assets
+│   └── favicon.ico
+├── src/                            # Application source code
+│   ├── app/                        # Next.js App Router folders
+│   │   ├── api/                    # API route endpoints
+│   │   │   ├── auth/               # next-auth authentication endpoints
+│   │   │   ├── chat/               # Conversational chat handlers
+│   │   │   └── chat-json/          # Structural booking JSON parser endpoint
+│   │   ├── chat/                   # Interactive chat interface page
+│   │   ├── help/                   # Customer support and FAQ page
+│   │   ├── history/                # Historical ticket transactions log page
+│   │   ├── login/                  # User login interface
+│   │   ├── profile/                # User account profile configurations page
+│   │   ├── qr/                     # Generated QR Ticket display board
+│   │   ├── register/               # New user signup portal
+│   │   ├── settings/               # Dark/Light theme & Language selection controls
+│   │   ├── globals.css             # Main theme variables (Dark/Light configurations)
+│   │   ├── layout.tsx              # Root HTML wrapper and layout container
+│   │   └── page.tsx                # Marketing landing interface page
+│   ├── components/                 # Reusable UI widgets
+│   │   ├── ChatSidebar.tsx         # Sidebar menu with chat title rename controls
+│   │   ├── MessageBubble.tsx       # Text messages renderer bubble
+│   │   ├── Providers.tsx           # Session providers wrapper (next-auth)
+│   │   └── WeatherWidget.tsx       # Real-time weather dashboard indicator
+│   ├── lib/                        # Core utilities & database connections
+│   │   ├── actions.ts              # Next.js Server Actions (CRUD operations)
+│   │   ├── prisma.ts               # PrismaClient database connection module
+│   │   └── supabaseClient.ts       # Supabase integration module
+│   ├── auth.ts                     # next-auth beta authentication configurations
+│   └── middleware.ts               # Next.js routing protection middleware
+├── .env.example                    # Sample environment configurations template
+├── .gitignore                      # Git ignored files & directories rules
+├── next.config.ts                  # Next.js compiler settings
+├── package.json                    # Node dependencies and execution scripts
+├── prisma.config.ts                # Prisma global parameters
+└── tsconfig.json                   # TypeScript compiling parameters
 ```
 
 ---
@@ -45,8 +157,8 @@ flowchart TD
 
 - **Framework:** Next.js 15 (App Router, Server Actions)
 - **AI Integration:** Vercel AI SDK (`ai`, `@ai-sdk/google`)
-- **Model:** Google Gemini 2.5 Flash Grounded
-- **Database:** PostgreSQL (hosted via Supabase)
+- **Model:** Google Gemini 3.5 Flash (with Search Grounding)
+- **Database:** PostgreSQL (hosted via Supabase/Neon)
 - **ORM:** Prisma Client with `@prisma/adapter-pg`
 - **Authentication:** NextAuth.js (v5 Beta)
 - **Styling:** Tailwind CSS v4 + Lucide Icons
@@ -56,15 +168,15 @@ flowchart TD
 ## Getting Started
 
 ### 1. Prerequisites
-Ensure you have Node.js (v18 or higher) and `npm` installed. You will also need a PostgreSQL database (e.g., Supabase, Neon) and a Google AI Studio API key.
+Ensure you have Node.js (v18 or higher) and `npm` installed. You will also need a PostgreSQL database and a Google AI Studio API key.
 
 ### 2. Installation
 
 Clone the repository and install dependencies:
 
 ```bash
-git clone https://github.com/your-username/kataar-app.git
-cd kataar-app
+git clone https://github.com/htan35/KATAAR.git
+cd KATAAR
 npm install
 ```
 
