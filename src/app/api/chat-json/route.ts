@@ -1,5 +1,5 @@
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
-import { generateText, type CoreMessage } from 'ai';
+import { generateText, type ModelMessage } from 'ai';
 import { auth } from '@/auth';
 import prisma from '@/lib/prisma';
 
@@ -99,7 +99,7 @@ export async function POST(req: Request) {
       orderBy: { createdAt: 'asc' },
     });
 
-    const messages: CoreMessage[] = dbMessages.map((m: any) => ({
+    const messages: ModelMessage[] = dbMessages.map((m: any) => ({
       role: m.role as 'user' | 'assistant' | 'system',
       content: m.content,
     }));
