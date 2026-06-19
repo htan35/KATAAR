@@ -3,7 +3,8 @@
 import React, { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import ChatSidebar from '@/components/ChatSidebar';
-import { Calendar, AlertCircle, RefreshCw, Eye, Loader2 } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
+import { Calendar, AlertCircle, RefreshCw, Eye, Loader2, ShieldCheck } from 'lucide-react';
 import { getUserTickets } from '@/lib/actions';
 
 export default function HistoryPage() {
@@ -11,6 +12,7 @@ export default function HistoryPage() {
   
   const [tickets, setTickets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [zoomedTicket, setZoomedTicket] = useState<any>(null);
 
   const fetchTickets = async () => {
     try {
@@ -111,14 +113,14 @@ export default function HistoryPage() {
                       <td className="py-4 px-6 text-right">
                         <div className="flex justify-end">
                           {!isExpired ? (
-                            <a 
-                              href="/qr"
+                            <button 
+                              onClick={() => setZoomedTicket(ticket)}
                               className="flex items-center gap-1.5 bg-accent-purple/10 hover:bg-accent-purple/20 border border-accent-purple/20 hover:border-accent-purple/35 text-accent-purple px-3 py-1.5 rounded-lg text-xs font-semibold transition duration-200"
                               title="View QR Code"
                             >
                               <Eye size={13} />
                               <span>View QR</span>
-                            </a>
+                            </button>
                           ) : (
                             <a 
                               href="/chat"
@@ -136,6 +138,50 @@ export default function HistoryPage() {
                 })}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {/* Zoomed QR Modal Overlay */}
+        {zoomedTicket && (
+          <div className="absolute inset-0 bg-[#06050a]/90 backdrop-blur-md flex flex-col items-center justify-center z-40 p-6 animate-[fadeIn_0.2s_ease-out]">
+            <div className="bg-[#120f1c] border border-border-glass rounded-3xl p-8 flex flex-col items-center shadow-[0_0_50px_rgba(139,92,246,0.15)] relative max-w-sm w-full text-center">
+              <button 
+                onClick={() => setZoomedTicket(null)}
+                className="absolute top-5 right-5 text-text-muted hover:text-white transition bg-white/5 p-1.5 rounded-full"
+                title="Close Modal"
+              >
+                ✕
+              </button>
+              
+              <div className="bg-accent-green/20 text-accent-green w-14 h-14 rounded-full flex items-center justify-center mb-5 shadow-[0_0_20px_rgba(16,185,129,0.2)]">
+                <ShieldCheck size={28} />
+              </div>
+              
+              <h2 className="text-2xl font-display font-bold text-text-primary mb-1">Ticket Valid</h2>
+              <p className="text-sm font-medium text-accent-lavender mb-6">{zoomedTicket.attraction}</p>
+              
+              <div className="bg-white p-3.5 rounded-2xl shadow-[0_0_30px_rgba(255,255,255,0.08)] mb-5">
+                <QRCodeSVG
+                  value={zoomedTicket.qrData}
+                  size={200}
+                  bgColor="transparent"
+                  fgColor="#000000"
+                  level="H"
+                  includeMargin={false}
+                />
+              </div>
+              
+              <span className="font-mono text-[11px] font-bold text-text-secondary tracking-widest bg-white/[0.03] px-4 py-1.5 rounded-lg border border-white/5 mb-7 shadow-inner">
+                {zoomedTicket.id.toUpperCase()}
+              </span>
+
+              <button
+                onClick={() => setZoomedTicket(null)}
+                className="w-full bg-accent-purple text-bg-primary hover:bg-accent-purple-hover font-bold text-sm px-6 py-3.5 rounded-xl transition shadow-lg"
+              >
+                Close View
+              </button>
+            </div>
           </div>
         )}
       </main>
