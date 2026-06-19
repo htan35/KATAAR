@@ -17,8 +17,10 @@ import {
   Ticket as TicketIcon, 
   User, 
   Loader2,
-  AlertTriangle
+  AlertTriangle,
+  ShieldCheck
 } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 import { createChat, getChatMessages, createTicket } from '@/lib/actions';
 
 type ChatMessage = {
@@ -50,6 +52,8 @@ function ChatContent() {
   const [showMap, setShowMap] = useState(false);
   const [bookingState, setBookingState] = useState<any>({ step: 'idle' });
   const [processingPayment, setProcessingPayment] = useState(false);
+  const [showQRModal, setShowQRModal] = useState(false);
+  const [bookedTicket, setBookedTicket] = useState<any>(null);
   const [inputMsg, setInputMsg] = useState('');
   const [localChatId, setLocalChatId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -134,7 +138,7 @@ function ChatContent() {
     // 2.5s delay to simulate transaction gateway redirect
     setTimeout(async () => {
       try {
-        await createTicket({
+        const ticket = await createTicket({
           attraction: bookingState.attraction || 'Unknown Attraction',
           date: bookingState.date || new Date().toLocaleDateString('en-GB').replace(/\//g, '-'),
           time: bookingState.time || '12:00 PM',
@@ -144,8 +148,10 @@ function ChatContent() {
           totalPrice: bookingState.totalPrice || 50,
         });
 
+        setBookedTicket(ticket);
         setBookingState((prev: any) => ({ ...prev, step: 'completed' }));
-        await submitMessage('System Confirmation: Payment of total price was successful. The ticket has been successfully created. Tell the user their ticket is ready on the Dashboard QR section.');
+        setShowQRModal(true);
+        await submitMessage('System Confirmation: Payment of total price was successful. The ticket has been successfully created. Tell the user their ticket is ready and they can view the QR code directly via the toggle in this chat or on the Dashboard QR section.');
       } catch (err) {
         console.error('Error issuing ticket:', err);
       } finally {
@@ -435,12 +441,69 @@ function ChatContent() {
           </div>
         )}
 
+        {/* View QR Toggle Button */}
+        {bookingState.step === 'completed' && bookedTicket && (
+          <div className="mx-6 mt-2 shrink-0 flex justify-center animate-[slideUp_0.4s_ease-out]">
+            <button 
+              onClick={() => setShowQRModal(true)}
+              className="bg-accent-green/15 hover:bg-accent-green/25 border border-accent-green/40 text-accent-green text-xs font-bold px-5 py-2.5 rounded-full flex items-center gap-2 transition shadow-[0_0_20px_rgba(16,185,129,0.15)] backdrop-blur-sm"
+            >
+              <ShieldCheck size={16} />
+              View Booked E-Ticket
+            </button>
+          </div>
+        )}
+
         {/* Payment Processing Overlay */}
         {processingPayment && (
           <div className="absolute inset-0 bg-[#06050a]/80 backdrop-blur-sm flex flex-col items-center justify-center gap-4 z-30">
             <Loader2 className="animate-spin text-accent-green" size={36} />
             <h3 className="text-lg font-semibold text-text-primary">Redirecting to Payment Gateway</h3>
             <p className="text-xs text-text-secondary">Please do not close this window or click back...</p>
+          </div>
+        )}
+
+        {/* Success QR Modal Overlay */}
+        {showQRModal && bookedTicket && (
+          <div className="absolute inset-0 bg-[#06050a]/90 backdrop-blur-md flex flex-col items-center justify-center z-40 p-6 animate-[fadeIn_0.2s_ease-out]">
+            <div className="bg-[#120f1c] border border-border-glass rounded-3xl p-8 flex flex-col items-center shadow-[0_0_50px_rgba(139,92,246,0.15)] relative max-w-sm w-full text-center">
+              <button 
+                onClick={() => setShowQRModal(false)}
+                className="absolute top-5 right-5 text-text-muted hover:text-white transition bg-white/5 p-1.5 rounded-full"
+                title="Close Modal"
+              >
+                ✕
+              </button>
+              
+              <div className="bg-accent-green/20 text-accent-green w-14 h-14 rounded-full flex items-center justify-center mb-5 shadow-[0_0_20px_rgba(16,185,129,0.2)]">
+                <ShieldCheck size={28} />
+              </div>
+              
+              <h2 className="text-2xl font-display font-bold text-text-primary mb-1">Ticket Confirmed</h2>
+              <p className="text-sm font-medium text-accent-lavender mb-6">{bookedTicket.attraction}</p>
+              
+              <div className="bg-white p-3.5 rounded-2xl shadow-[0_0_30px_rgba(255,255,255,0.08)] mb-5">
+                <QRCodeSVG
+                  value={bookedTicket.qrData}
+                  size={180}
+                  bgColor="transparent"
+                  fgColor="#000000"
+                  level="H"
+                  includeMargin={false}
+                />
+              </div>
+              
+              <span className="font-mono text-[11px] font-bold text-text-secondary tracking-widest bg-white/[0.03] px-4 py-1.5 rounded-lg border border-white/5 mb-7 shadow-inner">
+                {bookedTicket.id.toUpperCase()}
+              </span>
+
+              <button
+                onClick={() => setShowQRModal(false)}
+                className="w-full bg-accent-purple text-bg-primary hover:bg-accent-purple-hover font-bold text-sm px-6 py-3.5 rounded-xl transition shadow-lg"
+              >
+                Close & Return to Chat
+              </button>
+            </div>
           </div>
         )}
 
