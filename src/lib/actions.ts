@@ -110,6 +110,25 @@ export async function deleteChat(chatId: string) {
   return { success: true };
 }
 
+// Rename a chat session
+export async function updateChatTitle(chatId: string, title: string) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error('Unauthorized');
+
+  await prisma.chat.updateMany({
+    where: {
+      id: chatId,
+      userId: session.user.id,
+    },
+    data: {
+      title: title.trim() || 'Untitled Chat',
+    },
+  });
+
+  revalidatePath('/chat');
+  return { success: true };
+}
+
 // Update profile details
 export async function updateProfile(data: { firstName: string; lastName: string; mobileNumber: string; image?: string }) {
   const session = await auth();

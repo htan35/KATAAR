@@ -71,8 +71,9 @@ export async function POST(req: Request) {
       return new Response('Unauthorized', { status: 401 });
     }
 
-    const { message, chatId } = (await req.json()) as { message?: string; chatId?: string };
+    const { message, chatId, language } = (await req.json()) as { message?: string; chatId?: string; language?: string };
     const userText = message?.trim();
+    const userLang = language || 'English';
 
     if (!userText) {
       return new Response('Message is required', { status: 400 });
@@ -112,6 +113,8 @@ export async function POST(req: Request) {
       If booking details are in progress, append:
       [BOOKING_STATE: {"step": "attraction|date_time|members|confirm|payment|completed", "attraction": "Name", "date": "DD-MM-YYYY", "time": "HH:MM AM/PM", "tickets": {"adult": 0, "child": 0, "foreigner": 0}, "totalPrice": 0}]
       Only append valid JSON in that exact block when a booking is actually in progress.
+      
+      IMPORTANT: You must translate all your conversational responses and communicate entirely in the following language: ${userLang}. Do NOT translate the JSON BOOKING_STATE block keys or values.
     `;
 
     const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY;

@@ -22,3 +22,14 @@ The user reported that the AI defaulted to its initial greeting instead of proce
 2. Modified the `catch` block on the `generateText` method to explicitly catch and return quota/rate-limit errors.
 3. Instead of returning the default fallback string, the API now returns a system message informing the user that the rate limit was hit, preserving transparency in the UI.
 4. Committed and pushed these updates to the remote repository.
+
+## Interaction - 2026-06-20T03:25:00+05:30
+
+### Task Overview
+The user requested three UI/UX enhancements: making chat sidebar titles editable, implementing persistent global language selection (English, Hindi, Marathi, Spanish), and activating the "Light Mode" theme toggle.
+
+### Actions Taken
+1. **Editable Chat Titles**: Engineered inline editing functionality in `ChatSidebar.tsx` and created a secure Server Action (`updateChatTitle`) to persist the new title directly to the PostgreSQL database.
+2. **Language Localization**: Interfaced the Settings dropdown with persistent `localStorage`. The selected language is now passed securely via the Chat API to dynamically construct a Gemini System Prompt, forcing translated responses.
+3. **Theme Toggling**: Overhauled hardcoded CSS rules in `globals.css` into responsive CSS Variables. Activated a `data-theme="light"` toggle mechanism and injected a pre-hydration script into `layout.tsx` to prevent theme-flashing.
+4. Committed and pushed these feature additions to the remote repository.

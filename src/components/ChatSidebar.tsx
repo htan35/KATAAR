@@ -13,9 +13,10 @@ import {
   Menu, 
   Plus, 
   LogOut,
-  Trash2
+  Trash2,
+  Edit2
 } from 'lucide-react';
-import { getUserChats, deleteChat } from '@/lib/actions';
+import { getUserChats, deleteChat, updateChatTitle } from '@/lib/actions';
 
 interface ChatSidebarProps {
   activeChatId?: string | null;
@@ -30,6 +31,8 @@ export default function ChatSidebar({ activeChatId, onSelectChat, onNewChat }: C
   const [chats, setChats] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
+  const [editingChatId, setEditingChatId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState('');
 
   // Load user chats
   const fetchChats = async () => {
@@ -73,6 +76,36 @@ export default function ChatSidebar({ activeChatId, onSelectChat, onNewChat }: C
         console.error('Failed to delete chat:', err);
       }
     }
+  };
+
+  const handleEditClick = (e: React.MouseEvent, chat: any) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setEditingChatId(chat.id);
+    setEditTitle(chat.title);
+  };
+
+  const handleEditSave = async (chatId: string) => {
+    if (!editTitle.trim()) {
+      setEditingChatId(null);
+      return;
+    }
+    
+    // Optimistic UI update
+    setChats(prev => prev.map(c => c.id === chatId ? { ...c, title: editTitle } : c));
+    setEditingChatId(null);
+    
+    try {
+      await updateChatTitle(chatId, editTitle);
+      fetchChats();
+    } catch (err) {
+      console.error('Failed to update chat title:', err);
+    }
+  };
+
+  const handleEditKeyDown = (e: React.KeyboardEvent, chatId: string) => {
+    if (e.key === 'Enter') handleEditSave(chatId);
+    if (e.key === 'Escape') setEditingChatId(null);
   };
 
   const isActive = (path: string) => pathname === path;
@@ -178,26 +211,53 @@ export default function ChatSidebar({ activeChatId, onSelectChat, onNewChat }: C
                       : 'border border-transparent text-text-secondary hover:bg-white/[0.03] hover:text-text-primary'
                   }`}
                 >
-                  <a
-                    href={`/chat?id=${chat.id}`}
-                    onClick={(event) => {
-                      if (!onSelectChat) return;
-                      event.preventDefault();
-                      onSelectChat(chat.id);
-                    }}
-                    className="flex items-center gap-2.5 truncate w-full p-2.5 pr-9"
-                  >
-                    <MessageSquare size={14} className="shrink-0" />
-                    <span className="truncate">{chat.title}</span>
-                  </a>
-                  <button 
-                    type="button"
-                    onClick={(e) => handleDeleteChat(e, chat.id)}
-                    className="absolute right-2 opacity-0 group-hover:opacity-100 hover:text-accent-red p-1 rounded transition shrink-0"
-                    title="Delete Chat"
-                  >
-                    <Trash2 size={12} />
-                  </button>
+                  {editingChatId === chat.id ? (
+                    <div className="flex items-center gap-2 w-full p-2" onClick={(e) => e.stopPropagation()}>
+                      <MessageSquare size={14} className="shrink-0 text-accent-purple" />
+                      <input
+                        autoFocus
+                        type="text"
+                        value={editTitle}
+                        onChange={(e) => setEditTitle(e.target.value)}
+                        onBlur={() => handleEditSave(chat.id)}
+                        onKeyDown={(e) => handleEditKeyDown(e, chat.id)}
+                        className="bg-transparent border-b border-accent-purple outline-none text-text-primary text-xs w-full py-1"
+                      />
+                    </div>
+                  ) : (
+                    <>
+                      <a
+                        href={`/chat?id=${chat.id}`}
+                        onClick={(event) => {
+                          if (!onSelectChat) return;
+                          event.preventDefault();
+                          onSelectChat(chat.id);
+                        }}
+                        className="flex items-center gap-2.5 truncate w-full p-2.5 pr-14"
+                      >
+                        <MessageSquare size={14} className="shrink-0" />
+                        <span className="truncate">{chat.title}</span>
+                      </a>
+                      <div className="absolute right-2 opacity-0 group-hover:opacity-100 flex items-center gap-0.5 transition shrink-0">
+                        <button 
+                          type="button"
+                          onClick={(e) => handleEditClick(e, chat)}
+                          className="hover:text-accent-purple p-1 rounded transition"
+                          title="Rename Chat"
+                        >
+                          <Edit2 size={12} />
+                        </button>
+                        <button 
+                          type="button"
+                          onClick={(e) => handleDeleteChat(e, chat.id)}
+                          className="hover:text-accent-red p-1 rounded transition"
+                          title="Delete Chat"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </div>
               );
             })

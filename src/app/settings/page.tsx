@@ -18,8 +18,26 @@ export default function SettingsPage() {
 
   const [success, setSuccess] = useState(false);
 
+  useEffect(() => {
+    const savedLang = localStorage.getItem('kataar_language');
+    if (savedLang) setLanguage(savedLang);
+    
+    const savedTheme = localStorage.getItem('kataar_theme');
+    if (savedTheme) setTheme(savedTheme);
+  }, []);
+
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
+    localStorage.setItem('kataar_language', language);
+    localStorage.setItem('kataar_theme', theme);
+    
+    // Apply theme changes to document
+    if (theme === 'light') {
+      document.documentElement.setAttribute('data-theme', 'light');
+    } else {
+      document.documentElement.removeAttribute('data-theme');
+    }
+
     setSuccess(true);
     setTimeout(() => setSuccess(false), 3000);
   };
@@ -98,11 +116,10 @@ export default function SettingsPage() {
                     theme === 'light' 
                       ? 'bg-accent-purple/10 border-accent-purple text-accent-purple' 
                       : 'bg-white/[0.02] border-white/5 text-text-secondary'
-                  } opacity-30 cursor-not-allowed`}
-                  disabled
+                  }`}
                 >
                   <Sun size={16} />
-                  <span>Light Mode (Disabled)</span>
+                  <span>Light Mode</span>
                 </button>
               </div>
             </div>

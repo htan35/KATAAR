@@ -180,11 +180,13 @@ function ChatContent() {
     };
     setMessages((prev) => [...prev, userMessage]);
 
+    const preferredLanguage = typeof window !== 'undefined' ? localStorage.getItem('kataar_language') || 'English' : 'English';
+    
     try {
       const response = await fetch('/api/chat-json', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: content, chatId: activeId }),
+        body: JSON.stringify({ message: content, chatId: activeId, language: preferredLanguage }),
       });
 
       if (!response.ok) {
