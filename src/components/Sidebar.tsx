@@ -1,8 +1,7 @@
 'use client';
 
 import React from 'react';
-import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { 
   MessageSquare, 
@@ -21,7 +20,6 @@ import {
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const router = useRouter();
   const { user, signOut } = useAuth();
 
   const navItems = [
@@ -59,16 +57,16 @@ export default function Sidebar() {
         </div>
 
         {pathname !== '/chat' ? (
-          <button onClick={() => router.push('/chat')} className="nav-profile-btn home-btn">
+          <a href="/chat" className="nav-profile-btn home-btn">
             <ArrowLeft size={16} />
             <span>HOME</span>
             <Home size={14} className="home-icon-right" />
-          </button>
+          </a>
         ) : (
-          <button onClick={() => router.push('/qr')} className="nav-profile-btn dashboard-btn">
+          <a href="/qr" className="nav-profile-btn dashboard-btn">
             <span>DASHBOARD</span>
             <QrCode size={14} className="dashboard-icon-right" />
-          </button>
+          </a>
         )}
       </div>
     );
@@ -78,9 +76,9 @@ export default function Sidebar() {
     <aside className="kataar-sidebar glass-panel">
       <div className="sidebar-header">
         <Menu className="hamburger-icon" size={20} />
-        <Link href="/">
+        <a href="/">
           <h2 className="brand-logo">KATAAR</h2>
-        </Link>
+        </a>
       </div>
 
       {renderUserCard()}
@@ -94,14 +92,14 @@ export default function Sidebar() {
             
             return (
               <li key={item.path} className="nav-item">
-                <Link 
+                <a 
                   href={item.path} 
                   className={`nav-link ${active ? 'active' : ''}`}
                 >
                   <Icon className="nav-icon" size={18} />
                   <span>{item.name}</span>
                   {active && <span className="active-indicator" />}
-                </Link>
+                </a>
               </li>
             );
           })}
@@ -114,9 +112,9 @@ export default function Sidebar() {
             Log out
           </button>
         ) : (
-          <Link href="/login" className="sidebar-login-btn">
+          <a href="/login" className="sidebar-login-btn">
             Sign In
-          </Link>
+          </a>
         )}
       </div>
 

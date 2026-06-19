@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import ChatSidebar from '@/components/ChatSidebar';
 import { HelpCircle, ChevronDown, ChevronUp, MessageSquare, Landmark, QrCode, Loader2 } from 'lucide-react';
@@ -13,7 +12,6 @@ interface FAQItem {
 }
 
 export default function HelpPage() {
-  const router = useRouter();
   const { data: session, status } = useSession();
   const [openIndex, setOpenIndex] = useState<number | null>(0);
 
@@ -105,12 +103,12 @@ export default function HelpPage() {
 
             <div className="border-t border-white/5 pt-6 flex flex-col items-center gap-4 text-center text-xs text-text-secondary leading-relaxed">
               <p>Still need help? You can start a chat with the booking assistant at any time to query ticket terms.</p>
-              <button 
-                onClick={() => router.push('/chat')} 
+              <a 
+                href="/chat"
                 className="bg-accent-lavender text-bg-primary hover:bg-accent-lavender-hover font-bold text-sm px-6 py-2.5 rounded-lg transition duration-200"
               >
                 Start Chat Session
-              </button>
+              </a>
             </div>
 
           </div>

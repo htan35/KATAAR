@@ -9,7 +9,10 @@ const createPrismaClient = () => {
   if (!connectionString) {
     throw new Error('DATABASE_URL environment variable is missing');
   }
-  const pool = new Pool({ connectionString });
+  const pool = new Pool({ 
+    connectionString,
+    ssl: { rejectUnauthorized: false }
+  });
   const adapter = new PrismaPg(pool);
   return new PrismaClient({
     adapter,

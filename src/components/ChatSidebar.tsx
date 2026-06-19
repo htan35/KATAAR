@@ -1,8 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
 import { 
   MessageSquare, 
@@ -16,7 +15,7 @@ import {
   LogOut,
   Trash2
 } from 'lucide-react';
-import { getUserChats, deleteChat, createChat } from '@/lib/actions';
+import { getUserChats, deleteChat } from '@/lib/actions';
 
 interface ChatSidebarProps {
   activeChatId?: string | null;
@@ -26,12 +25,10 @@ interface ChatSidebarProps {
 
 export default function ChatSidebar({ activeChatId, onSelectChat, onNewChat }: ChatSidebarProps) {
   const pathname = usePathname();
-  const router = useRouter();
   const { data: session } = useSession();
   
   const [chats, setChats] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [creatingChat, setCreatingChat] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
 
   // Load user chats
@@ -62,25 +59,6 @@ export default function ChatSidebar({ activeChatId, onSelectChat, onNewChat }: C
     { name: 'Help', path: '/help', icon: HelpCircle },
   ];
 
-  const handleCreateNewChat = async () => {
-    if (creatingChat) return;
-    if (onNewChat) {
-      onNewChat();
-      return;
-    }
-
-    try {
-      setCreatingChat(true);
-      const newChat = await createChat('New Chat');
-      await fetchChats();
-      router.push(`/chat?id=${newChat.id}`);
-    } catch (err) {
-      console.error('Failed to create new chat:', err);
-    } finally {
-      setCreatingChat(false);
-    }
-  };
-
   const handleDeleteChat = async (e: React.MouseEvent, chatId: string) => {
     e.stopPropagation();
     e.preventDefault();
@@ -89,7 +67,7 @@ export default function ChatSidebar({ activeChatId, onSelectChat, onNewChat }: C
         await deleteChat(chatId);
         fetchChats();
         if (activeChatId === chatId) {
-          router.push('/chat');
+          window.location.assign('/chat');
         }
       } catch (err) {
         console.error('Failed to delete chat:', err);
@@ -103,11 +81,11 @@ export default function ChatSidebar({ activeChatId, onSelectChat, onNewChat }: C
     <aside className="w-80 h-full flex flex-col p-6 bg-bg-glass backdrop-blur-xl border border-border-glass rounded-2xl gap-5 shadow-2xl overflow-hidden shrink-0">
       <div className="flex items-center gap-3 pb-3 border-b border-white/5">
         <Menu className="text-text-secondary cursor-pointer hover:text-text-primary transition" size={20} />
-        <Link href="/">
+        <a href="/">
           <h2 className="text-2xl font-extrabold tracking-widest bg-gradient-to-r from-white to-accent-lavender bg-clip-text text-transparent font-display">
             KATAAR
           </h2>
-        </Link>
+        </a>
       </div>
 
       {/* User Profile Card */}
@@ -146,9 +124,8 @@ export default function ChatSidebar({ activeChatId, onSelectChat, onNewChat }: C
             
             return (
               <li key={item.path}>
-                <Link 
+                <a 
                   href={item.path} 
-                  prefetch={false}
                   className={`flex items-center gap-3 p-3 rounded-lg text-sm transition relative ${
                     active 
                       ? 'bg-accent-purple/10 text-accent-purple font-semibold' 
@@ -158,7 +135,7 @@ export default function ChatSidebar({ activeChatId, onSelectChat, onNewChat }: C
                   <Icon size={18} />
                   <span>{item.name}</span>
                   {active && <span className="absolute left-0 top-1/4 h-1/2 w-[3px] bg-accent-purple rounded-r" />}
-                </Link>
+                </a>
               </li>
             );
           })}
@@ -169,15 +146,18 @@ export default function ChatSidebar({ activeChatId, onSelectChat, onNewChat }: C
       <div className="flex-1 flex flex-col min-h-0">
         <div className="flex justify-between items-center px-3 mb-2 shrink-0">
           <span className="text-[10px] uppercase tracking-wider text-text-muted">Chat History</span>
-          <button 
-            type="button"
-            onClick={handleCreateNewChat}
-            disabled={creatingChat}
-            className="p-1 rounded hover:bg-white/5 text-text-secondary hover:text-text-primary transition disabled:opacity-50 disabled:cursor-wait"
+          <a
+            href="/chat"
+            onClick={(event) => {
+              if (!onNewChat) return;
+              event.preventDefault();
+              onNewChat();
+            }}
+            className="p-1 rounded hover:bg-white/5 text-text-secondary hover:text-text-primary transition"
             title="New Chat"
           >
             <Plus size={16} />
-          </button>
+          </a>
         </div>
 
         {/* Scrollable list */}
@@ -198,9 +178,8 @@ export default function ChatSidebar({ activeChatId, onSelectChat, onNewChat }: C
                       : 'border border-transparent text-text-secondary hover:bg-white/[0.03] hover:text-text-primary'
                   }`}
                 >
-                  <Link
+                  <a
                     href={`/chat?id=${chat.id}`}
-                    prefetch={false}
                     onClick={(event) => {
                       if (!onSelectChat) return;
                       event.preventDefault();
@@ -210,7 +189,7 @@ export default function ChatSidebar({ activeChatId, onSelectChat, onNewChat }: C
                   >
                     <MessageSquare size={14} className="shrink-0" />
                     <span className="truncate">{chat.title}</span>
-                  </Link>
+                  </a>
                   <button 
                     type="button"
                     onClick={(e) => handleDeleteChat(e, chat.id)}

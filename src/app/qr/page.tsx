@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import ChatSidebar from '@/components/ChatSidebar';
 import { QRCodeSVG } from 'qrcode.react';
@@ -9,7 +8,6 @@ import { Calendar, Clock, Landmark, Trash2, ShieldCheck, AlertCircle, Loader2 } 
 import { getUserTickets, deleteTicket } from '@/lib/actions';
 
 export default function QRPage() {
-  const router = useRouter();
   const { data: session, status } = useSession();
   
   const [tickets, setTickets] = useState<any[]>([]);
@@ -74,12 +72,12 @@ export default function QRPage() {
             <AlertCircle size={44} className="text-text-muted" />
             <h3 className="text-lg font-semibold text-text-primary">No Active E-Tickets</h3>
             <p className="text-xs text-text-secondary">You don't have any upcoming trips. Talk to our assistant in the Chat Panel to book a ticket!</p>
-            <button 
-              onClick={() => router.push('/chat')} 
+            <a 
+              href="/chat"
               className="bg-accent-purple text-bg-primary hover:bg-accent-purple-hover font-bold text-sm px-6 py-3 rounded-lg transition duration-200 mt-2"
             >
               Go Book a Ticket
-            </button>
+            </a>
           </div>
         ) : (
           <div className="flex-1 overflow-y-auto pr-1 flex flex-col gap-6">

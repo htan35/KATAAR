@@ -1,9 +1,8 @@
 'use client';
 
 import React, { Suspense, useState, useRef, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { useChat } from '@ai-sdk/react';
 import ChatSidebar from '@/components/ChatSidebar';
 import MessageBubble from '@/components/MessageBubble';
 import WeatherWidget from '@/components/WeatherWidget';
@@ -22,6 +21,13 @@ import {
 } from 'lucide-react';
 import { createChat, getChatMessages, createTicket } from '@/lib/actions';
 
+type ChatMessage = {
+  id: string;
+  role: 'user' | 'assistant' | 'system';
+  parts: Array<{ type: 'text'; text: string }>;
+  createdAt?: Date | string;
+};
+
 export default function ChatPage() {
   return (
     <Suspense fallback={
@@ -36,33 +42,30 @@ export default function ChatPage() {
 }
 
 function ChatContent() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const chatId = searchParams.get('id');
   const { data: session } = useSession();
 
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const [showMap, setShowMap] = useState(false);
   const [bookingState, setBookingState] = useState<any>({ step: 'idle' });
   const [processingPayment, setProcessingPayment] = useState(false);
   const [inputMsg, setInputMsg] = useState('');
+  const [localChatId, setLocalChatId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [requestLoading, setRequestLoading] = useState(false);
+  const [chatError, setChatError] = useState<Error | undefined>();
   
   const chatBottomRef = useRef<HTMLDivElement>(null);
 
-  const { 
-    messages, 
-    sendMessage, 
-    setMessages, 
-    status: chatStatus,
-    error: chatError,
-    clearError,
-  } = useChat({
-    id: chatId || undefined,
-    onError: (error) => {
-      console.error('Chat request failed:', error);
-    },
-  });
+  const isLoading = requestLoading;
 
-  const isLoading = chatStatus === 'streaming' || chatStatus === 'submitted';
+  const createActiveChat = async () => {
+    const newChat = await createChat('New Chat');
+    setLocalChatId(newChat.id);
+    window.history.replaceState(null, '', `/chat?id=${newChat.id}`);
+    return newChat.id;
+  };
 
   // Scroll to bottom
   useEffect(() => {
@@ -71,36 +74,41 @@ function ChatContent() {
 
   // Load chat history when chatId changes
   useEffect(() => {
+    if (localChatId === chatId) {
+      return;
+    }
+
     if (chatId) {
       setLoadingHistory(true);
       getChatMessages(chatId)
         .then((dbMsgs) => {
-          setMessages(
+          if (dbMsgs.length > 0) {
+            setMessages(
             dbMsgs.map((m: any) => ({
               id: m.id,
               role: m.role as 'user' | 'assistant' | 'system',
               parts: [{ type: 'text', text: m.content }],
-              createdAt: m.createdAt,
-            }))
-          );
+                createdAt: m.createdAt,
+              }))
+            );
+          }
         })
         .catch((err) => console.error('Failed to load chat history:', err))
         .finally(() => setLoadingHistory(false));
     } else {
       setMessages([]);
     }
-    setBookingState((prev: any) => prev.step === 'idle' && Object.keys(prev).length === 1 ? prev : { step: 'idle' });
   }, [chatId]); // Removed setMessages dependency to fix infinite rendering loop
 
   // Parse booking state from messages
   useEffect(() => {
-    const assistantMsgs = messages.filter((m: any) => m.role === 'assistant');
+    const assistantMsgs = messages.filter((m) => m.role === 'assistant');
     const lastAssistantMsg = assistantMsgs[assistantMsgs.length - 1];
 
     if (lastAssistantMsg && lastAssistantMsg.parts) {
-      const textPart = lastAssistantMsg.parts.find((p: any) => p.type === 'text');
+      const textPart = lastAssistantMsg.parts.find((p) => p.type === 'text');
       if (textPart && 'text' in textPart) {
-        const match = (textPart as any).text.match(/\[BOOKING_STATE:\s*({.*?})\]/s);
+        const match = textPart.text.match(/\[BOOKING_STATE:\s*({.*?})\]/s);
         if (match) {
           try {
             const state = JSON.parse(match[1]);
@@ -110,8 +118,6 @@ function ChatContent() {
           }
         }
       }
-    } else {
-      setBookingState((prev: any) => prev.step === 'idle' && Object.keys(prev).length === 1 ? prev : { step: 'idle' });
     }
   }, [messages]);
 
@@ -139,15 +145,7 @@ function ChatContent() {
         });
 
         setBookingState((prev: any) => ({ ...prev, step: 'completed' }));
-        
-        // Let the assistant know the payment completed
-        sendMessage({
-          text: 'System Confirmation: Payment of total price was successful. The ticket has been successfully created. Tell the user their ticket is ready on the Dashboard QR section.',
-        }, {
-          body: {
-            chatId,
-          }
-        });
+        await submitMessage('System Confirmation: Payment of total price was successful. The ticket has been successfully created. Tell the user their ticket is ready on the Dashboard QR section.');
       } catch (err) {
         console.error('Error issuing ticket:', err);
       } finally {
@@ -156,90 +154,81 @@ function ChatContent() {
     }, 2500);
   };
 
-  const handleSend = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!inputMsg.trim() || isLoading || processingPayment) return;
+  const submitMessage = async (content: string) => {
+    if (!content.trim() || requestLoading || processingPayment) return;
 
-    let activeId = chatId;
+    setChatError(undefined);
+    setRequestLoading(true);
+
+    let activeId = chatId || localChatId;
     if (!activeId) {
-      setLoadingHistory(true);
       try {
-        const newChat = await createChat('New Chat');
-        activeId = newChat.id;
-        router.push(`/chat?id=${activeId}`);
+        activeId = await createActiveChat();
       } catch (err) {
         console.error('Failed to create new chat:', err);
-        setLoadingHistory(false);
+        setChatError(err instanceof Error ? err : new Error('Failed to create chat.'));
+        setRequestLoading(false);
         return;
       }
     }
 
+    const userMessage: ChatMessage = {
+      id: `local-user-${Date.now()}`,
+      role: 'user',
+      parts: [{ type: 'text', text: content }],
+      createdAt: new Date(),
+    };
+    setMessages((prev) => [...prev, userMessage]);
+
+    try {
+      const response = await fetch('/api/chat-json', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: content, chatId: activeId }),
+      });
+
+      if (!response.ok) {
+        const details = await response.text();
+        throw new Error(details || 'Chat request failed.');
+      }
+
+      const data = (await response.json()) as { reply: string; messageId?: string };
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: data.messageId || `local-assistant-${Date.now()}`,
+          role: 'assistant',
+          parts: [{ type: 'text', text: data.reply }],
+          createdAt: new Date(),
+        },
+      ]);
+    } catch (err) {
+      console.error('Chat request failed:', err);
+      setChatError(err instanceof Error ? err : new Error('Chat request failed.'));
+    } finally {
+      setRequestLoading(false);
+    }
+  };
+
+  const handleSend = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inputMsg.trim() || isLoading || processingPayment) return;
+
     const content = inputMsg;
     setInputMsg('');
-
-    sendMessage({
-      text: content,
-    }, {
-      body: {
-        chatId: activeId,
-      }
-    });
+    await submitMessage(content);
   };
 
   const handleChipClick = async (attractionName: string) => {
     if (isLoading || processingPayment) return;
 
-    let activeId = chatId;
-    if (!activeId) {
-      setLoadingHistory(true);
-      try {
-        const newChat = await createChat('New Chat');
-        activeId = newChat.id;
-        router.push(`/chat?id=${activeId}`);
-      } catch (err) {
-        console.error('Failed to create new chat:', err);
-        setLoadingHistory(false);
-        return;
-      }
-    }
-
-    sendMessage({
-      text: `I'd like to book tickets for ${attractionName}`,
-    }, {
-      body: {
-        chatId: activeId,
-      }
-    });
+    await submitMessage(`I'd like to book tickets for ${attractionName}`);
   };
 
   const handleQuickBookDemo = async () => {
     if (isLoading || processingPayment) return;
 
-    let activeId = chatId;
-    if (!activeId) {
-      setLoadingHistory(true);
-      try {
-        const newChat = await createChat('New Chat');
-        activeId = newChat.id;
-        router.push(`/chat?id=${activeId}`);
-      } catch (err) {
-        console.error('Failed to create new chat:', err);
-        setLoadingHistory(false);
-        return;
-      }
-    }
-
-    sendMessage({
-      text: "I want to book a ticket for a historic place near me for 2 adults next Saturday at 11:00 AM. Please use maps or web results to suggest options first.",
-    }, {
-      body: {
-        chatId: activeId,
-      }
-    });
-  };
-
-  const handleResetChat = () => {
-    router.push('/chat');
+    await submitMessage("I want to book a ticket for a historic place near me for 2 adults next Saturday at 11:00 AM. Please use maps or web results to suggest options first.");
   };
 
   return (
@@ -258,13 +247,13 @@ function ChatContent() {
             </div>
           </div>
           <div className="flex items-center gap-3.5">
-            <button 
-              onClick={handleResetChat} 
+            <a 
+              href="/chat"
               className="text-text-secondary hover:bg-white/5 hover:text-text-primary p-2 rounded-lg transition"
               title="Reset Conversation"
             >
               <RefreshCw size={18} />
-            </button>
+            </a>
           </div>
         </header>
 
@@ -316,7 +305,7 @@ function ChatContent() {
               </div>
               <button
                 type="button"
-                onClick={clearError}
+                onClick={() => setChatError(undefined)}
                 className="rounded-lg border border-accent-red/25 px-3 py-1 text-xs font-semibold hover:bg-accent-red/10"
               >
                 Dismiss
@@ -330,14 +319,22 @@ function ChatContent() {
               <span>Loading messages...</span>
             </div>
           ) : (
-            messages.map((msg: any) => (
-              <MessageBubble 
-                key={msg.id}
-                role={msg.role}
-                content={(msg.parts || []).filter((p: any) => p.type === 'text').map((p: any) => p.text).join('') || msg.content || ''}
-                createdAt={msg.createdAt}
-              />
-            ))
+            messages.map((msg) => {
+              const rawContent = (msg.parts || []).filter((p: any) => p.type === 'text').map((p: any) => p.text).join('');
+              const displayContent = rawContent.replace(/\[BOOKING_STATE:\s*({.*?})\]/s, '').trim();
+              
+              // Only render if there's actually content to show (sometimes it's purely a state update)
+              if (!displayContent && msg.role === 'assistant') return null;
+
+              return (
+                <MessageBubble 
+                  key={msg.id}
+                  role={msg.role}
+                  content={displayContent}
+                  createdAt={msg.createdAt}
+                />
+              );
+            })
           )}
 
           {/* Typing Indicator */}
@@ -356,9 +353,9 @@ function ChatContent() {
           <div ref={chatBottomRef} />
         </div>
 
-        {/* Booking Card overlay / status preview */}
+        {/* Booking Card inline / status preview */}
         {bookingState.step !== 'idle' && bookingState.step !== 'completed' && (
-          <div className="absolute bottom-[96px] left-6 right-6 bg-[#161226]/95 backdrop-blur-md border border-accent-purple/30 rounded-xl p-4 flex flex-col gap-3 shadow-[0_8px_30px_rgba(0,0,0,0.6)] z-20 animate-[slideUp_0.3s_ease-out]">
+          <div className="mx-6 mt-2 shrink-0 bg-[#161226]/95 backdrop-blur-md border border-accent-purple/30 rounded-xl p-4 flex flex-col gap-3 shadow-lg z-20 animate-[slideUp_0.3s_ease-out]">
             <div className="flex justify-between items-center border-b border-white/5 pb-2">
               <div className="flex items-center gap-2 text-accent-purple">
                 <TicketIcon size={16} />
@@ -371,7 +368,17 @@ function ChatContent() {
             
             <div className="flex flex-col gap-3">
               {bookingState.attraction && (
-                <div className="w-full h-32 rounded-lg overflow-hidden border border-white/10 relative shadow-inner">
+                <button 
+                  onClick={() => setShowMap(!showMap)}
+                  className="self-start text-xs font-semibold flex items-center gap-1.5 text-accent-lavender hover:text-white transition bg-white/5 px-2.5 py-1.5 rounded-md border border-white/10"
+                >
+                  <MapPin size={14} />
+                  {showMap ? 'Hide Map' : 'View on Map'}
+                </button>
+              )}
+              
+              {showMap && bookingState.attraction && (
+                <div className="w-full h-40 rounded-lg overflow-hidden border border-white/10 relative shadow-inner animate-[slideDown_0.2s_ease-out]">
                   <iframe
                     width="100%"
                     height="100%"
@@ -479,12 +486,12 @@ function ChatContent() {
                 </h3>
                 <span className="text-[11px] text-text-secondary truncate">{session.user.email}</span>
               </div>
-              <button 
-                onClick={() => router.push('/qr')} 
+              <a 
+                href="/qr"
                 className="bg-accent-lavender text-bg-primary hover:bg-accent-lavender-hover px-3 py-1.5 text-[10px] font-bold rounded-lg transition"
               >
                 DASHBOARD
-              </button>
+              </a>
             </div>
           </div>
         )}

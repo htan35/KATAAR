@@ -1,11 +1,18 @@
-import { google } from '@ai-sdk/google';
-import { streamText } from 'ai';
+import { createGoogleGenerativeAI } from '@ai-sdk/google';
+import {
+  convertToModelMessages,
+  createUIMessageStream,
+  createUIMessageStreamResponse,
+  streamText,
+  type UIMessage,
+} from 'ai';
 import { auth } from '@/auth';
 import prisma from '@/lib/prisma';
 
 export const maxDuration = 30;
 
 type IncomingMessage = {
+  id?: string;
   role?: string;
   content?: string;
   parts?: Array<{ type?: string; text?: string }>;
@@ -21,6 +28,90 @@ function getMessageText(message: IncomingMessage | undefined) {
       .join('');
   }
   return '';
+}
+
+async function persistChatTurn({
+  chatId,
+  userText,
+  assistantText,
+}: {
+  chatId: string;
+  userText: string;
+  assistantText: string;
+}) {
+  if (userText) {
+    await prisma.message.create({
+      data: {
+        chatId,
+        role: 'user',
+        content: userText,
+      },
+    });
+  }
+
+  await prisma.message.create({
+    data: {
+      chatId,
+      role: 'assistant',
+      content: assistantText,
+    },
+  });
+
+  await prisma.chat.update({
+    where: { id: chatId },
+    data: { updatedAt: new Date() },
+  });
+
+  const chat = await prisma.chat.findUnique({
+    where: { id: chatId },
+  });
+
+  if (chat && chat.title === 'New Chat') {
+    const newTitle = userText.length > 25 ? userText.substring(0, 25) + '...' : userText;
+    await prisma.chat.update({
+      where: { id: chatId },
+      data: { title: newTitle || 'Chat Session' },
+    });
+  }
+}
+
+function fallbackResponse({
+  messages,
+  chatId,
+  userText,
+}: {
+  messages: UIMessage[];
+  chatId: string;
+  userText: string;
+}) {
+  const text = [
+    'I can help you book QR entry for any historic place.',
+    '',
+    'Tell me the city or exact location first, then I can help you choose a monument, museum, fort, gallery, palace, memorial, or heritage site and continue with date, time, visitors, and checkout.',
+    '',
+    userText.toLowerCase().includes('near me')
+      ? 'For "near me" searches, please share your city or area so I can suggest relevant historic places.'
+      : 'You can say something like: "Find historic places in Jaipur" or "Book tickets for Qutub Minar tomorrow for 2 adults."',
+  ].join('\n');
+
+  const stream = createUIMessageStream<UIMessage>({
+    originalMessages: messages,
+    execute: ({ writer }) => {
+      const id = `fallback-${Date.now()}`;
+      writer.write({ type: 'text-start', id });
+      writer.write({ type: 'text-delta', id, delta: text });
+      writer.write({ type: 'text-end', id });
+    },
+    onFinish: async () => {
+      try {
+        await persistChatTurn({ chatId, userText, assistantText: text });
+      } catch (dbError) {
+        console.error('Failed to save fallback chat turn:', dbError);
+      }
+    },
+  });
+
+  return createUIMessageStreamResponse({ stream });
 }
 
 export async function POST(req: Request) {
@@ -52,6 +143,9 @@ export async function POST(req: Request) {
       return new Response('Chat session not found', { status: 404 });
     }
 
+    const lastUserMsg = messages[messages.length - 1] as IncomingMessage | undefined;
+    const lastUserText = getMessageText(lastUserMsg);
+
     const systemInstruction = `
       You are KATAAR E-Ticketing AI, a premium conversational helper.
       Your goal is to assist users with general questions, map/location discovery, booking details, and real-time inquiries for ANY historic location, museum, monument, fort, palace, gallery, archaeological site, memorial, or heritage place worldwide.
@@ -81,66 +175,36 @@ export async function POST(req: Request) {
       Ensure the JSON is strictly valid. Do not format the JSON inside markdown ticks. Only append this block if a booking is in progress.
     `;
 
-    // Stream text using Vercel AI SDK
+    const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY;
+    if (!apiKey) {
+      return fallbackResponse({ messages, chatId, userText: lastUserText });
+    }
+
+    const google = createGoogleGenerativeAI({ apiKey });
+    const modelMessages = await convertToModelMessages(messages);
+
     const result = await streamText({
       model: google('gemini-2.5-flash'),
-      messages,
+      messages: modelMessages,
       system: systemInstruction,
+      timeout: 20000,
       providerOptions: {
         google: {
-          useSearchGrounding: true, // Enables Google Search grounding
+          useSearchGrounding: true,
         },
       },
       onFinish: async ({ text }) => {
         try {
-          // 1. Save the user's last message to the database
-          const lastUserMsg = messages[messages.length - 1];
-          const lastUserText = getMessageText(lastUserMsg);
-          if (lastUserMsg) {
-            await prisma.message.create({
-              data: {
-                chatId,
-                role: 'user',
-                content: lastUserText,
-              },
-            });
-          }
-
-          // 2. Save the assistant's response to the database
-          await prisma.message.create({
-            data: {
-              chatId,
-              role: 'assistant',
-              content: text,
-            },
-          });
-
-          // 3. Update the chat's updatedAt field
-          await prisma.chat.update({
-            where: { id: chatId },
-            data: { updatedAt: new Date() },
-          });
-
-          // 4. If the chat title is still "New Chat", rename it based on user's first query
-          const chat = await prisma.chat.findUnique({
-            where: { id: chatId },
-          });
-
-          if (chat && chat.title === 'New Chat') {
-            const userPrompt = lastUserText;
-            const newTitle = userPrompt.length > 25 ? userPrompt.substring(0, 25) + '...' : userPrompt;
-            await prisma.chat.update({
-              where: { id: chatId },
-              data: { title: newTitle || 'Chat Session' },
-            });
-          }
+          await persistChatTurn({ chatId, userText: lastUserText, assistantText: text });
         } catch (dbError) {
           console.error('Failed to save messages to PostgreSQL via Prisma:', dbError);
         }
       },
     });
 
-    return result.toTextStreamResponse();
+    return result.toUIMessageStreamResponse({
+      originalMessages: messages,
+    });
   } catch (error: any) {
     console.error('API Chat route error:', error);
     return new Response(

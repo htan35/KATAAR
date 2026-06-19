@@ -1,14 +1,12 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import ChatSidebar from '@/components/ChatSidebar';
 import { Calendar, AlertCircle, RefreshCw, Eye, Loader2 } from 'lucide-react';
 import { getUserTickets } from '@/lib/actions';
 
 export default function HistoryPage() {
-  const router = useRouter();
   const { data: session, status } = useSession();
   
   const [tickets, setTickets] = useState<any[]>([]);
@@ -60,12 +58,12 @@ export default function HistoryPage() {
             <AlertCircle size={44} className="text-text-muted" />
             <h3 className="text-lg font-semibold text-text-primary">No Booking Records</h3>
             <p className="text-xs text-text-secondary">Your history log is currently empty. Start booking with our conversational assistant!</p>
-            <button 
-              onClick={() => router.push('/chat')} 
+            <a 
+              href="/chat"
               className="bg-accent-purple text-bg-primary hover:bg-accent-purple-hover font-bold text-sm px-6 py-3 rounded-lg transition duration-200 mt-2"
             >
               Go to Chat
-            </button>
+            </a>
           </div>
         ) : (
           <div className="flex-1 overflow-y-auto bg-white/[0.01] border border-border-glass rounded-xl shadow-md">
@@ -113,23 +111,23 @@ export default function HistoryPage() {
                       <td className="py-4 px-6 text-right">
                         <div className="flex justify-end">
                           {!isExpired ? (
-                            <button 
-                              onClick={() => router.push('/qr')} 
+                            <a 
+                              href="/qr"
                               className="flex items-center gap-1.5 bg-accent-purple/10 hover:bg-accent-purple/20 border border-accent-purple/20 hover:border-accent-purple/35 text-accent-purple px-3 py-1.5 rounded-lg text-xs font-semibold transition duration-200"
                               title="View QR Code"
                             >
                               <Eye size={13} />
                               <span>View QR</span>
-                            </button>
+                            </a>
                           ) : (
-                            <button 
-                              onClick={() => router.push('/chat')} 
+                            <a 
+                              href="/chat"
                               className="flex items-center gap-1.5 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-text-secondary hover:text-text-primary px-3 py-1.5 rounded-lg text-xs font-medium transition duration-200"
                               title="Book Again"
                             >
                               <RefreshCw size={11} />
                               <span>Book Again</span>
-                            </button>
+                            </a>
                           )}
                         </div>
                       </td>
