@@ -121,7 +121,7 @@ export async function POST(req: Request) {
       try {
         const google = createGoogleGenerativeAI({ apiKey });
         const result = await generateText({
-          model: google('gemini-2.5-flash'),
+          model: google('gemini-3.5-flash'),
           system,
           messages,
           timeout: 20000,
