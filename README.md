@@ -2,7 +2,7 @@
 
 **Get E-Tickets Faster with AI**
 
-KATAAR is a next-generation e-ticketing platform built with Next.js, Prisma, and the Vercel AI SDK. By integrating Google Gemini's live web grounding capabilities, KATAAR allows users to conversationally search for, discover, and book tickets for any museum, art gallery, monument, or historic location worldwide—bypassing traditional complicated booking forms.
+KATAAR is a next-generation e-ticketing platform built with Next.js, Prisma, and the Vercel AI SDK. By integrating Google Gemini's live web grounding capabilities, KATAAR allows users to conversationally search for, discover, and book tickets for any museum, art gallery, monument, or historic location worldwide bypassing traditional complicated booking forms.
 
 ---
 
