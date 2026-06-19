@@ -17,6 +17,30 @@ KATAAR is a next-generation e-ticketing platform built with Next.js, Prisma, and
 
 ---
 
+## System Architecture & Activity Flow
+
+```mermaid
+flowchart TD
+    A([User Authenticated]) --> B(Access Chat Dashboard)
+    B --> C{Natural Language Input}
+    
+    C -- Query --> D[Gemini 3.5 Flash Engine]
+    D --> E[(Google Web Grounding)]
+    E -- Live Data --> F[Extract Pricing & Timings]
+    
+    F --> G{Booking State Generator}
+    G -- JSON Object --> H[Render UI Booking Card]
+    
+    H -- User Confirmation --> I[Payment Gateway Simulation]
+    I -- Success --> J[(PostgreSQL Database)]
+    J --> K[Generate Unique E-Ticket]
+    K --> L[Embed QR Code Signature]
+    
+    L --> M([Display Ticket in Dashboard])
+```
+
+---
+
 ## Tech Stack
 
 - **Framework:** Next.js 15 (App Router, Server Actions)
