@@ -3,8 +3,9 @@
 import React from 'react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
+import { ArrowLeft } from 'lucide-react';
 
-export default function LandingPage() {
+export default function AboutPage() {
   const { data: session } = useSession();
 
   return (
@@ -15,7 +16,7 @@ export default function LandingPage() {
           <Link href="/">KATAAR</Link>
         </div>
         <nav className="flex gap-10 max-md:hidden">
-          <Link href="/about" className="text-text-secondary hover:text-text-primary text-sm font-semibold transition">About Us</Link>
+          <Link href="/about" className="text-text-primary text-sm font-semibold transition">About Us</Link>
           <Link href="/contact" className="text-text-secondary hover:text-text-primary text-sm font-semibold transition">Contact</Link>
           <Link href="/resources" className="text-text-secondary hover:text-text-primary text-sm font-semibold transition">Resources</Link>
         </nav>
@@ -46,53 +47,37 @@ export default function LandingPage() {
         </div>
       </header>
 
-      {/* Main Hero Section */}
-      <main className="flex-1 flex flex-col items-center justify-center relative py-20 px-5 max-w-[900px] mx-auto text-center">
-        {/* Hand-drawn Squiggle top-left */}
-        <div className="absolute select-none pointer-events-none top-[60px] left-[10px] animate-[float_4s_ease-in-out_infinite_alternate] max-md:top-[20px]">
-          <svg width="100" height="60" viewBox="0 0 100 60" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M10 10C25 15 20 40 45 42C65 44 60 20 75 18C90 16 85 45 92 48" stroke="rgba(255, 255, 255, 0.15)" strokeWidth="3" strokeLinecap="round" />
-          </svg>
-        </div>
-
-        <div className="flex flex-col items-center gap-7 z-5">
-          <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight leading-[1.1] bg-gradient-to-b from-white to-text-secondary bg-clip-text text-transparent font-display">
-            Get your E-tickets <br />
-            faster with our chatbot.
+      {/* Main Content */}
+      <main className="flex-1 flex flex-col items-center justify-center relative py-20 px-5 max-w-[800px] mx-auto text-center z-10">
+        <Link href="/" className="absolute top-0 left-0 md:-left-20 flex items-center gap-2 text-text-secondary hover:text-accent-purple transition group">
+          <ArrowLeft size={18} className="group-hover:-translate-x-1 transition" />
+          <span className="text-sm font-semibold">Back to Home</span>
+        </Link>
+        
+        <div className="flex flex-col items-center gap-6 animate-[slideUp_0.6s_ease-out]">
+          <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight leading-[1.1] text-text-primary font-display">
+            About <span className="text-accent-purple">KATAAR</span>
           </h1>
           <p className="text-base md:text-lg text-text-secondary leading-relaxed max-w-[620px]">
-            Experience the <span className="text-accent-purple font-semibold">convenience</span> of booking e-tickets <span className="text-accent-purple font-semibold">seamlessly</span> through our <span className="text-accent-purple font-semibold">AI</span> chatbot interface. Say goodbye to long queues and complicated processes.
+            KATAAR is revolutionizing how people explore and book historic sites across India. We believe that heritage should be accessible, seamless, and free from endless queues.
           </p>
-
-          <div className="flex items-center gap-5 mt-2">
-            <Link 
-              href="/chat"
-              className="flex items-center gap-2 bg-slate-100 hover:bg-slate-50 text-slate-900 px-7 py-3.5 rounded-xl font-bold text-sm shadow-[0_4px_14px_rgba(255,255,255,0.08)] transition duration-200 hover:scale-[1.01] active:scale-[0.99] cursor-pointer"
-            >
-              <span>Book your ticket now</span>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="m9 18 6-6-6-6"/>
-              </svg>
-            </Link>
-
-            <Link 
-              href="/help"
-              className="flex items-center gap-2 text-text-primary hover:text-accent-purple px-6 py-3.5 font-semibold text-sm transition duration-200 cursor-pointer"
-            >
-              <span>Learn more</span>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="m9 18 6-6-6-6"/>
-              </svg>
-            </Link>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-10 w-full">
+            <div className="bg-white/[0.03] border border-border-glass p-6 rounded-2xl flex flex-col gap-3 items-center hover:bg-white/[0.06] transition duration-300">
+              <div className="w-12 h-12 bg-accent-purple/20 rounded-full flex items-center justify-center text-accent-purple font-bold text-xl">1</div>
+              <h3 className="font-bold text-text-primary">Instant Booking</h3>
+              <p className="text-xs text-text-secondary">Skip the line with AI-powered instant ticketing directly to your device.</p>
+            </div>
+            <div className="bg-white/[0.03] border border-border-glass p-6 rounded-2xl flex flex-col gap-3 items-center hover:bg-white/[0.06] transition duration-300">
+              <div className="w-12 h-12 bg-accent-green/20 rounded-full flex items-center justify-center text-accent-green font-bold text-xl">2</div>
+              <h3 className="font-bold text-text-primary">Smart Discovery</h3>
+              <p className="text-xs text-text-secondary">Find hidden gems and historic monuments near you with conversational AI.</p>
+            </div>
+            <div className="bg-white/[0.03] border border-border-glass p-6 rounded-2xl flex flex-col gap-3 items-center hover:bg-white/[0.06] transition duration-300">
+              <div className="w-12 h-12 bg-yellow-500/20 rounded-full flex items-center justify-center text-yellow-500 font-bold text-xl">3</div>
+              <h3 className="font-bold text-text-primary">Secure QR Entry</h3>
+              <p className="text-xs text-text-secondary">Present your dynamic QR code at the gates for frictionless entry.</p>
+            </div>
           </div>
-        </div>
-
-        {/* Hand-drawn Arrow pointing to primary button */}
-        <div className="absolute select-none pointer-events-none bottom-5 left-[-40px] rotate-[5deg] max-md:hidden">
-          <svg width="180" height="90" viewBox="0 0 180 90" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M15 75C60 70 120 40 145 15" stroke="rgba(255, 255, 255, 0.1)" strokeWidth="2.5" strokeLinecap="round" />
-            <path d="M130 14C140 14 145 15 145 15L144 28" stroke="rgba(255, 255, 255, 0.1)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
         </div>
       </main>
 

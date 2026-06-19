@@ -4,7 +4,7 @@ import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { signIn } from 'next-auth/react';
-import { Lock, Mail, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Lock, Mail, Eye, EyeOff, Loader2, ArrowLeft } from 'lucide-react';
 
 export default function LoginPage() {
   return (
@@ -102,8 +102,12 @@ function LoginContent() {
       </div>
 
       {/* Main Login Panel */}
-      <div className="w-full max-w-[460px] p-8 md:p-10 flex flex-col gap-6 z-10 bg-bg-glass backdrop-blur-xl border border-border-glass rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] animate-[fadeIn_0.5s_ease-out]">
-        <div className="text-center flex flex-col gap-2">
+      <div className="w-full max-w-[460px] p-8 md:p-10 flex flex-col gap-6 z-10 bg-bg-glass backdrop-blur-xl border border-border-glass rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] animate-[fadeIn_0.5s_ease-out] relative">
+        <Link href="/" className="absolute top-6 left-8 flex items-center gap-1.5 text-text-muted hover:text-accent-purple transition group">
+          <ArrowLeft size={14} className="group-hover:-translate-x-1 transition" />
+          <span className="text-xs font-semibold">Back</span>
+        </Link>
+        <div className="text-center flex flex-col gap-2 mt-4">
           <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight text-text-primary font-display">Welcome Back!</h2>
           <p className="text-sm text-text-secondary">The faster you fill up, the faster you get the ticket.</p>
         </div>

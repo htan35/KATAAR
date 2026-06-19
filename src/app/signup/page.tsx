@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { signIn } from 'next-auth/react';
 import { registerUser } from '@/lib/actions';
-import { Lock, Mail, Phone, Eye, EyeOff } from 'lucide-react';
+import { Lock, Mail, Phone, Eye, EyeOff, ArrowLeft } from 'lucide-react';
 
 export default function SignupPage() {
   const router = useRouter();
@@ -92,8 +92,12 @@ export default function SignupPage() {
       </div>
 
       {/* Main Signup Card */}
-      <div className="w-full max-w-[480px] p-8 md:p-10 flex flex-col gap-6 z-10 bg-bg-glass backdrop-blur-xl border border-border-glass rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] animate-[fadeIn_0.5s_ease-out]">
-        <div className="text-center flex flex-col gap-2">
+      <div className="w-full max-w-[480px] p-8 md:p-10 flex flex-col gap-6 z-10 bg-bg-glass backdrop-blur-xl border border-border-glass rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] animate-[fadeIn_0.5s_ease-out] relative">
+        <Link href="/" className="absolute top-6 left-8 flex items-center gap-1.5 text-text-muted hover:text-accent-purple transition group">
+          <ArrowLeft size={14} className="group-hover:-translate-x-1 transition" />
+          <span className="text-xs font-semibold">Back</span>
+        </Link>
+        <div className="text-center flex flex-col gap-2 mt-4">
           <h2 className="text-3xl font-extrabold tracking-tight text-text-primary font-display">Create Account</h2>
           <p className="text-sm text-text-secondary">
             Already a member? <Link href="/login" className="text-accent-purple font-semibold hover:underline">Log In</Link>
