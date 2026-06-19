@@ -1,4 +1,4 @@
-# KATAAR 🎫
+# KATAAR
 
 **Get E-Tickets Faster with AI**
 
@@ -6,7 +6,7 @@ KATAAR is a next-generation e-ticketing platform built with Next.js, Prisma, and
 
 ---
 
-## 🌟 Key Features
+## Key Features
 
 - **Conversational Booking Interface:** Chat with an AI agent to search for monuments, verify timings, and book tickets instantly.
 - **Live Google Grounding:** The AI engine accesses live Google Search to provide up-to-date operating hours and ticketing information for any global attraction.
@@ -17,7 +17,7 @@ KATAAR is a next-generation e-ticketing platform built with Next.js, Prisma, and
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 - **Framework:** Next.js 15 (App Router, Server Actions)
 - **AI Integration:** Vercel AI SDK (`ai`, `@ai-sdk/google`)
@@ -29,7 +29,7 @@ KATAAR is a next-generation e-ticketing platform built with Next.js, Prisma, and
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### 1. Prerequisites
 Ensure you have Node.js (v18 or higher) and `npm` installed. You will also need a PostgreSQL database (e.g., Supabase, Neon) and a Google AI Studio API key.
@@ -77,7 +77,7 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 ---
 
-## 🛡️ Security Note
+## Security Note
 
 This repository is structured for production deployment. Sensitive credentials must be handled strictly through environment variables. The `prisma.config.ts` configuration routes standard migrations appropriately. Ensure that all `.env*` files (except `.env.example`) are added to your `.gitignore`.
 
