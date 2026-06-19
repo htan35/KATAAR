@@ -132,8 +132,13 @@ export async function POST(req: Request) {
           },
         });
         reply = result.text || reply;
-      } catch (modelError) {
-        console.error('Gemini chat failed, using fallback reply:', modelError);
+      } catch (modelError: any) {
+        console.error('Gemini chat failed:', modelError);
+        if (modelError.message?.includes('Quota exceeded') || modelError.message?.includes('rate-limit') || modelError.status === 429) {
+          reply = "System: You have hit the Google Gemini Free Tier rate limit (max 15 requests per minute). Please wait 10 seconds and try again.";
+        } else {
+          reply = `System: The AI provider encountered an error: ${modelError.message || 'Please try again later.'}`;
+        }
       }
     }
 
